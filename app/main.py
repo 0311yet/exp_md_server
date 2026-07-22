@@ -8,10 +8,15 @@ import os
 from fastapi import FastAPI, Request, Response, Form, HTTPException
 from fastapi.responses import JSONResponse, RedirectResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse, RedirectResponse, HTMLResponse
 
 from . import config, auth, db, mdparse
 
 app = FastAPI(title="Experience Library")
+
+# Vercel 自动从 public/ 目录服务静态文件（CDN，无 Python 开销）
+# 本地 uvicorn 不走 public/，所以手动挂载 public/ 为 /static（向后兼容 /style.css → public/style.css）
+app.mount("/static", StaticFiles(directory="public"), "static")
 
 # 本地开发（SQLite，无 TLS）时 session cookie 不加 Secure flag
 # Vercel 始终走 HTTPS，可以加 Secure
