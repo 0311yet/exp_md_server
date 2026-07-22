@@ -20,15 +20,30 @@ uvicorn app.main:app --reload --port 8000
 # 访问 http://localhost:8000
 ```
 
-### 部署到 Vercel
+### 部署到 Vercel + Turso
+
+#### 1. 创建 Turso 数据库
 
 ```bash
-git clone <your-repo>
-cd exp_md_server
+# 安装 turso CLI
+curl -sSfL https://get.tur.so/install.sh | bash
 
-# 在 Vercel Dashboard 创建项目，关联 GitHub
-# Settings → Environment Variables 填入所有环境变量
-git push
+# 创建数据库
+turso db create exp-md-server
+turso db show exp-md-server --url          # 复制到 TURSO_DATABASE_URL
+turso db tokens create exp-md-server        # 复制到 TURSO_AUTH_TOKEN
+```
+
+#### 2. Vercel 部署
+
+```bash
+# 在 Vercel Dashboard 新建项目，关联 GitHub repo
+# Settings → Environment Variables 填入：
+#   LOGIN_PASSWORD       → 你的管理密码
+#   SESSION_SECRET       → openssl rand -hex 32
+#   TURSO_DATABASE_URL   → libsql://xxx.turso.io
+#   TURSO_AUTH_TOKEN     → eyJhbGci...
+git push   # 自动触发部署
 ```
 
 ---
@@ -39,9 +54,12 @@ git push
 |------|------|------|
 | `LOGIN_PASSWORD` | Web 管理密码 | `your-strong-password` |
 | `SESSION_SECRET` | session cookie 签名密钥 | `openssl rand -hex 32` |
-| `TURSO_DATABASE_URL` | Turso 数据库 URL（Vercel 用，不填则走 SQLite） | `libsql://your-db.turso.io` |
+| `TURSO_DATABASE_URL` | Turso 数据库 URL（部署到 Vercel 时必填，不填则走本地 SQLite） | `libsql://your-db.turso.io` |
 | `TURSO_AUTH_TOKEN` | Turso 认证 token | `eyJhbGci...` |
-| `DB_FILE` | 本地 SQLite 路径（可选） | `data/exp_md.db` |
+| `DB_FILE` | 本地 SQLite 路径（可选，默认 `data/exp_md.db`） | `data/exp_md.db` |
+
+**本地开发**：`TURSO_DATABASE_URL` 不填，自动使用 SQLite  
+**Vercel 部署**：`TURSO_DATABASE_URL` 必填，走 Turso HTTP API（无状态，适合 Serverless）
 
 ---
 
@@ -123,11 +141,29 @@ exp_md_server/
 │   ├── config.py     # 环境变量
 │   ├── mdparse.py    # frontmatter 解析
 │   └── templates.py  # 内联 Jinja2 模板
-├── static/
-│   ├── app.js        # 前端 AJAX + 首屏渲染
+├── public/           # 静态文件（Vercel CDN 自动服务）
+│   ├── app.js
 │   └── style.css
 ├── api/index.py      # Vercel 入口
 ├── vercel.json
 ├── requirements.txt
 └── .env.example
 ```
+
+---
+
+## Vercel 架构说明
+
+```
+请求 /static/app.js
+    → vercel.json rewrite: /static/(.*) → /public/$1
+    → public/app.js（CDN 缓存，零 Python 开销）
+
+请求 /api/experiences
+    → vercel.json rewrite: /(.*) → /api/index
+    → api/index.py → app/main.py → Turso HTTP API
+```
+
+- **静态文件**（CSS/JS）：Vercel CDN 直接服务，无冷启动
+- **API 请求**：FastAPI 处理，走 Turso HTTP API（`libsql://`）
+- **无状态**：每个函数实例独立，Turso 提供共享数据库
