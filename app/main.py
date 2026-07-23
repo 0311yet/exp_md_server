@@ -14,9 +14,10 @@ from . import config, auth, db, mdparse
 
 app = FastAPI(title="Experience Library")
 
-# Vercel 自动从 public/ 目录服务静态文件（CDN，无 Python 开销）
-# 本地 uvicorn 不走 public/，所以手动挂载 public/ 为 /static（向后兼容 /style.css → public/style.css）
-app.mount("/static", StaticFiles(directory="public"), "static")
+# Vercel Python 运行时只打包 api/ 及其 import 链中的文件，project root 的 public/ 不可达
+# 所以静态文件在 app/static_assets/ 也放一份，从那里挂载
+_static_dir = os.path.join(os.path.dirname(__file__), "static_assets")
+app.mount("/static", StaticFiles(directory=_static_dir), "static")
 
 # 本地开发（SQLite，无 TLS）时 session cookie 不加 Secure flag
 # Vercel 始终走 HTTPS，可以加 Secure
