@@ -1,7 +1,5 @@
 {
   "rewrites": [
-    { "src": "/static/(.*)", "dest": "/public/$1" },
     { "source": "/(.*)", "destination": "/api/index" }
-  ],
-  "public": true
+  ]
 }
