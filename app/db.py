@@ -196,7 +196,7 @@ def list_experiences(limit: int = 100, offset: int = 0,
             WHERE {where_sql}
             ORDER BY created_at DESC
             LIMIT ? OFFSET ?
-        """, args + (limit, offset))
+        """, args + [limit, offset])
         return [_row_experiences(r) for r in rows]
     with Session(_engine) as s:
         q = select(Experience)
