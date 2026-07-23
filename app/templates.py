@@ -66,7 +66,7 @@ def make_dashboard_html(csrf_token: str, experiences, pending, tokens) -> str:
         '    <meta charset="UTF-8">'
         '    <meta name="viewport" content="width=device-width, initial-scale=1.0">'
         '    <title>Experience Library - 经验库</title>'
-        '    <link rel="stylesheet" href="/static/style.css">'
+        '    <link rel="stylesheet" href="/static/style.css?v=2">'
         '    <script>'
         '        window.__DATA__ = ' + init_js + ';'
         '    </script>'
@@ -100,7 +100,8 @@ def make_dashboard_html(csrf_token: str, experiences, pending, tokens) -> str:
         '    </section>'
         '    <button id="logout-btn" class="logout">退出登录</button>'
         '</div>'
-        '<script src="/static/app.js?v=2"></script>'
+        + csrf_hidden + '\n'
+        '<script src="/static/app.js?v=3"></script>'
         '</body>'
         '</html>'
     )
